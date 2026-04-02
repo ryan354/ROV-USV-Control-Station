@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack",
+        "niclas-olofsson.vs-qml",
+        "niclas-olofsson.vs-qml-syntax",
+        "niclas-olofsson.qml-format",
+        "niclas-olofsson.qml-debug",
+        "niclas-olofsson.qml-lsp"
+    ]
+}

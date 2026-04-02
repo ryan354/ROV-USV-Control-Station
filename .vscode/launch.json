@@ -1,0 +1,63 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "RovoControl (Release)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Release/RovoControl.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/Release",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "C:\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
+                },
+                {
+                    "name": "QT_QPA_PLATFORM",
+                    "value": "windows"
+                },
+                {
+                    "name": "QSG_INFO",
+                    "value": "1"
+                }
+            ],
+            "console": "integratedTerminal",
+            "preLaunchTask": "CMake: Build Release"
+        },
+        {
+            "name": "RovoControl (Debug)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Debug/RovoControl.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/Debug",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "C:\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
+                },
+                {
+                    "name": "QT_QPA_PLATFORM",
+                    "value": "windows"
+                },
+                {
+                    "name": "QML_IMPORT_TRACE",
+                    "value": "1"
+                }
+            ],
+            "console": "integratedTerminal",
+            "preLaunchTask": "CMake: Build Debug",
+            "visualizerFile": "C:/Qt/6.8.3/msvc2022_64/lib/cmake/Qt6Core/qt6.natvis"
+        },
+        {
+            "name": "RovoControl (Attach)",
+            "type": "cppvsdbg",
+            "request": "attach",
+            "processId": "${command:pickProcess}",
+            "visualizerFile": "C:/Qt/6.8.3/msvc2022_64/lib/cmake/Qt6Core/qt6.natvis"
+        }
+    ]
+}

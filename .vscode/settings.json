@@ -1,0 +1,65 @@
+{
+    // ─── CMake ──────────────────────────────────────────────────────────────
+    "cmake.generator": "Visual Studio 17 2022",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureArgs": [
+        "-DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64",
+        "-DENABLE_SDL2=ON"
+    ],
+    "cmake.configureOnOpen": true,
+    "cmake.buildBeforeRun": true,
+
+    // ─── C++ IntelliSense ───────────────────────────────────────────────────
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/third_party/mavlink",
+        "C:/Qt/6.8.3/msvc2022_64/include/**",
+        "C:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0",
+        "C:/gstreamer/1.0/msvc_x86_64/include/glib-2.0",
+        "C:/gstreamer/1.0/msvc_x86_64/lib/glib-2.0/include"
+    ],
+
+    // ─── QML ────────────────────────────────────────────────────────────────
+    "qml.qmldir": "${workspaceFolder}/qml",
+
+    // ─── File Associations ──────────────────────────────────────────────────
+    "files.associations": {
+        "*.qml": "qml",
+        "*.js": "javascript",
+        "*.qrc": "xml",
+        "CMakeLists.txt": "cmake"
+    },
+
+    // ─── Terminal PATH ──────────────────────────────────────────────────────
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Program Files\\CMake\\bin;C:\\Qt\\6.8.3\\msvc2022_64\\bin;C:\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
+    },
+    "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake.exe",
+
+    // ─── Editor ─────────────────────────────────────────────────────────────
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [100],
+
+    // ─── Exclude build artifacts from search ────────────────────────────────
+    "files.exclude": {
+        "**/build/**": true,
+        "**/build2/**": true,
+        "**/third_party/mavlink/ardupilotmega/**": true,
+        "**/third_party/mavlink/common/**": true,
+        "**/third_party/mavlink/uAvionix/**": true,
+        "**/third_party/mavlink/icarous/**": true,
+        "**/third_party/mavlink/loweheiser/**": true,
+        "**/third_party/mavlink/cubepilot/**": true,
+        "**/third_party/mavlink/csAirLink/**": true,
+        "**/third_party/mavlink/standard/**": true,
+        "**/third_party/mavlink/minimal/**": true
+    },
+    "search.exclude": {
+        "**/build/**": true,
+        "**/build2/**": true,
+        "**/third_party/mavlink/**": true
+    }
+}

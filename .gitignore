@@ -1,0 +1,51 @@
+# Build
+build/
+build2/
+cmake-build-*/
+out/
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.autosave
+CMakeLists.txt.user
+
+# IDE (keep .vscode for project setup)
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp / screenshots
+*.png
+*.bmp
+debug_output.txt
+stderr.txt
+stdout.txt
+
+# Claude plans
+.claude/

@@ -1,0 +1,15 @@
+[
+  {
+    "name": "MSVC 2022 x64 + Qt 6.8.3",
+    "visualStudio": "cc2e873c",
+    "visualStudioArchitecture": "x64",
+    "preferredGenerator": {
+      "name": "Visual Studio 17 2022",
+      "platform": "x64"
+    },
+    "cmakeSettings": {
+      "CMAKE_PREFIX_PATH": "C:/Qt/6.8.3/msvc2022_64",
+      "ENABLE_SDL2": "ON"
+    }
+  }
+]
