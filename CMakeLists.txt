@@ -39,10 +39,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 option(ENABLE_GSTREAMER "Enable GStreamer video pipeline" ON)
 if(ENABLE_GSTREAMER)
-    # Try to find GStreamer at known location
+    # Try to find GStreamer at known locations
     set(_GST_ROOT "C:/gstreamer/1.0/msvc_x86_64")
     if(DEFINED ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64})
         string(REGEX REPLACE "[/\\\\]+$" "" _GST_ROOT "$ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64}")
+    elseif(EXISTS "C:/Program Files/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0/gst/gst.h")
+        set(_GST_ROOT "C:/Program Files/gstreamer/1.0/msvc_x86_64")
     endif()
 
     if(EXISTS "${_GST_ROOT}/include/gstreamer-1.0/gst/gst.h")

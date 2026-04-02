@@ -176,7 +176,7 @@
 
     // ─── QWebChannel (optional bridge) ──────────────────────────────────────
     function connectBridge() {
-        if (typeof QWebChannel === 'undefined') {
+        if (typeof QWebChannel === 'undefined' || typeof qt === 'undefined') {
             console.log('QWebChannel not available, using direct JS calls');
             return;
         }

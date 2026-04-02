@@ -16,9 +16,9 @@
         "${workspaceFolder}/src",
         "${workspaceFolder}/third_party/mavlink",
         "C:/Qt/6.8.3/msvc2022_64/include/**",
-        "C:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0",
-        "C:/gstreamer/1.0/msvc_x86_64/include/glib-2.0",
-        "C:/gstreamer/1.0/msvc_x86_64/lib/glib-2.0/include"
+        "C:/Program Files/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0",
+        "C:/Program Files/gstreamer/1.0/msvc_x86_64/include/glib-2.0",
+        "C:/Program Files/gstreamer/1.0/msvc_x86_64/lib/glib-2.0/include"
     ],
 
     // ─── QML ────────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@
 
     // ─── Terminal PATH ──────────────────────────────────────────────────────
     "terminal.integrated.env.windows": {
-        "PATH": "C:\\Program Files\\CMake\\bin;C:\\Qt\\6.8.3\\msvc2022_64\\bin;C:\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
+        "PATH": "C:\\Program Files\\CMake\\bin;C:\\Qt\\6.8.3\\msvc2022_64\\bin;C:\\Program Files\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
     },
     "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake.exe",
 

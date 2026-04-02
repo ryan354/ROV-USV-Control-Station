@@ -1,7 +1,9 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#ifdef HAS_WEBENGINE
 #include <QtWebEngineQuick>
+#endif
 #include <QQmlContext>
 #include <QDebug>
 
@@ -14,7 +16,9 @@
 
 int main(int argc, char *argv[])
 {
+#ifdef HAS_WEBENGINE
     QtWebEngineQuick::initialize();
+#endif
     QGuiApplication app(argc, argv);
     app.setApplicationName("RovoControl");
     app.setOrganizationName("RovoControl");

@@ -1,7 +1,7 @@
 [
   {
     "name": "MSVC 2022 x64 + Qt 6.8.3",
-    "visualStudio": "cc2e873c",
+    "visualStudio": "a4f6e4d5",
     "visualStudioArchitecture": "x64",
     "preferredGenerator": {
       "name": "Visual Studio 17 2022",

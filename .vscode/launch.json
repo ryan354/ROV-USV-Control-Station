@@ -12,7 +12,7 @@
             "environment": [
                 {
                     "name": "PATH",
-                    "value": "C:\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
+                    "value": "C:\\Program Files\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
                 },
                 {
                     "name": "QT_QPA_PLATFORM",
@@ -37,7 +37,7 @@
             "environment": [
                 {
                     "name": "PATH",
-                    "value": "C:\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
+                    "value": "C:\\Program Files\\gstreamer\\1.0\\msvc_x86_64\\bin;${env:PATH}"
                 },
                 {
                     "name": "QT_QPA_PLATFORM",

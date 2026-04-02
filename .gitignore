@@ -49,3 +49,4 @@ stdout.txt
 
 # Claude plans
 .claude/
+*.log

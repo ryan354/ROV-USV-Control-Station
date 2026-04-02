@@ -199,17 +199,74 @@ resources/
 third_party/mavlink/        # Pre-generated MAVLink v2 headers
 ```
 
-## Testing with SITL
+## Testing with SITL (ArduPilot Software-In-The-Loop)
 
+### Prerequisites — Cygwin Setup (one-time)
+
+1. Download the Cygwin installer from https://www.cygwin.com/install.html (`setup-x86_64.exe`)
+2. Run the installer and select these packages:
+   - `gcc-g++`, `make`, `cmake`, `git`, `procps-ng`
+   - `python37`, `python37-pip`, `python37-devel`
+   - `libxml2-devel`, `libxslt-devel`
+3. Open **Cygwin Terminal** and install Python dependencies:
+   ```bash
+   pip3.7 install pymavlink pexpect future lxml empy==3.3.4
+   ```
+4. Clone and build ArduPilot:
+   ```bash
+   cd ~
+   git clone --recurse-submodules https://github.com/ArduPilot/ardupilot.git
+   cd ardupilot
+   git submodule update --init --recursive
+
+   # Configure for SITL
+   python3.7 modules/waf/waf-light configure --board sitl
+
+   # Build ArduSub (ROV)
+   python3.7 modules/waf/waf-light build --target bin/ardusub -j6
+
+   # Build ArduRover (USV / motorboat)
+   python3.7 modules/waf/waf-light build --target bin/ardurover -j6
+   ```
+
+### Running SITL
+
+Open **two Cygwin terminals** and run:
+
+**Terminal 1 — ArduSub (ROV, SYSID 1, port 14550):**
 ```bash
-# Terminal 1: ROV simulator
-sim_vehicle.py -v ArduSub --instance 0
-
-# Terminal 2: USV simulator
-sim_vehicle.py -v Rover --instance 1
-
-# Both will connect to RovoControl automatically
+cd ~/ardupilot
+./build/sitl/bin/ardusub -S --model vectored --speedup 1 --sysid 1 -I0 \
+  --home 33.810313,-118.393867,0.0,270.0 \
+  --defaults Tools/autotest/default_params/sub.parm \
+  --serial0=udpclient:127.0.0.1:14550
 ```
+
+**Terminal 2 — ArduBoat (USV, SYSID 2, port 14551):**
+```bash
+cd ~/ardupilot
+./build/sitl/bin/ardurover -S --model motorboat --speedup 1 --sysid 2 -I1 \
+  --home 33.810313,-118.393867,0.0,270.0 \
+  --defaults Tools/autotest/default_params/rover.parm,Tools/autotest/default_params/motorboat.parm \
+  --serial0=udpclient:127.0.0.1:14551
+```
+
+Press **Ctrl+C** in each terminal to stop.
+
+### SITL Flag Reference
+
+| Flag | Purpose |
+|------|---------|
+| `--sysid N` | MAVLink system ID (must be unique per vehicle) |
+| `-I N` | Instance number (offsets ports by N*10 to avoid conflicts) |
+| `--serial0=udpclient:IP:PORT` | Sends MAVLink over UDP directly to RovoControl |
+| `--model vectored` | BlueROV2-style 6-DOF thruster layout |
+| `--model motorboat` | Surface vessel physics |
+| `-S` | Synthetic clock (keeps simulation in sync) |
+| `--speedup N` | Simulation speed multiplier |
+| `-L RATBeach` | Named location shortcut (same as `--home 33.81...`) |
+
+> **Note:** These commands run the SITL binaries directly instead of using `sim_vehicle.py`, because `sim_vehicle.py` requires MAVProxy which depends on numpy (very slow to build on Cygwin). The `--serial0=udpclient:...` flag sends MAVLink straight to RovoControl without MAVProxy.
 
 ## License
 
