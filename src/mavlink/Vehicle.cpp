@@ -45,6 +45,9 @@ void Vehicle::handleMessage(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_RC_CHANNELS:
         processRcChannels(msg);
         break;
+    case MAVLINK_MSG_ID_COMMAND_ACK:
+        processCommandAck(msg);
+        break;
     }
 }
 
@@ -86,6 +89,7 @@ void Vehicle::processHeartbeat(const mavlink_message_t &msg)
     bool newArmed = (hb.base_mode & MAV_MODE_FLAG_SAFETY_ARMED) != 0;
     if (newArmed != m_armed) {
         m_armed = newArmed;
+        qDebug() << "Vehicle" << m_name << ": Armed state changed to" << (m_armed ? "ARMED" : "DISARMED");
         emit armedChanged();
     }
 
@@ -198,15 +202,42 @@ void Vehicle::processRcChannels(const mavlink_message_t &msg)
     // Currently just tracking — extend as needed
 }
 
+void Vehicle::processCommandAck(const mavlink_message_t &msg)
+{
+    mavlink_command_ack_t ack;
+    mavlink_msg_command_ack_decode(&msg, &ack);
+
+    QString cmdName;
+    switch (ack.command) {
+    case MAV_CMD_COMPONENT_ARM_DISARM: cmdName = "ARM/DISARM"; break;
+    case MAV_CMD_DO_SET_MODE: cmdName = "SET_MODE"; break;
+    default: cmdName = QString::number(ack.command); break;
+    }
+
+    QString resultStr;
+    switch (ack.result) {
+    case MAV_RESULT_ACCEPTED: resultStr = "ACCEPTED"; break;
+    case MAV_RESULT_TEMPORARILY_REJECTED: resultStr = "TEMPORARILY_REJECTED"; break;
+    case MAV_RESULT_DENIED: resultStr = "DENIED"; break;
+    case MAV_RESULT_UNSUPPORTED: resultStr = "UNSUPPORTED"; break;
+    case MAV_RESULT_FAILED: resultStr = "FAILED"; break;
+    default: resultStr = QString("RESULT_%1").arg(ack.result); break;
+    }
+
+    qDebug() << "Vehicle" << m_name << ": COMMAND_ACK" << cmdName << "=" << resultStr;
+}
+
 // ─── Commands ───────────────────────────────────────────────────────────────
 
 void Vehicle::arm()
 {
+    qDebug() << "Vehicle" << m_name << ": Sending ARM command";
     sendCommandLong(MAV_CMD_COMPONENT_ARM_DISARM, 1.0f);
 }
 
 void Vehicle::disarm()
 {
+    qDebug() << "Vehicle" << m_name << ": Sending DISARM command";
     sendCommandLong(MAV_CMD_COMPONENT_ARM_DISARM, 0.0f);
 }
 

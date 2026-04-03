@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path Planning</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; }
+        html, body, #map { width: 100%; height: 100%; }
+        .wp-icon { background: none; border: none; }
+        .wp-label {
+            background: rgba(0,10,0,0.85); border: 1px solid #00ff41; border-radius: 3px;
+            color: #00ff41; font: bold 12px Consolas; padding: 2px 6px; white-space: nowrap;
+        }
+        .text-label {
+            background: rgba(0,10,0,0.85); border: 1px solid #ffaa00; border-radius: 3px;
+            color: #ffaa00; font: bold 13px Consolas; padding: 3px 8px; white-space: nowrap;
+        }
+        .vehicle-tooltip { background: none; border: none; box-shadow: none; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    var map = L.map('map', { center: [0, 0], zoom: 3, zoomControl: true });
+
+    var googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 22, attribution: 'Google'
+    }).addTo(map);
+    var googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 22 });
+    var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 22 });
+    L.control.layers({ "Hybrid": googleHybrid, "Satellite": googleSat, "Streets": googleStreets },
+        null, { position: 'topright', collapsed: true }).addTo(map);
+    L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+
+    // ── State ──
+    var waypoints = [], wpMarkers = [], wpLine = null;
+    var polygonPoints = [], polygonMarkers = [], polygonShape = null;
+    var textLabels = [];
+    var mode = 'waypoint';
+    var vehicles = {};
+    var firstCenter = false;
+
+    // ── Vehicle icons ──
+    function vehicleSvg(color, heading) {
+        var r = heading || 0;
+        return '<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+            '<circle cx="18" cy="18" r="14" fill="rgba(0,0,0,0.4)" stroke="' + color + '" stroke-width="2"/>' +
+            '<g transform="rotate(' + r + ', 18, 18)">' +
+            '<polygon points="18,4 11,26 18,22 25,26" fill="' + color + '" stroke="white" stroke-width="0.5" opacity="0.95"/>' +
+            '</g><circle cx="18" cy="18" r="2.5" fill="white"/></svg>';
+    }
+
+    function updateVehiclePosition(sysId, lat, lon, heading, vtype) {
+        if (lat === 0 && lon === 0) return;
+        var color = vtype === 1 ? '#00ccff' : '#ffaa00';
+        var label = vtype === 1 ? 'ROV' : 'USV';
+        var latlng = L.latLng(lat, lon);
+
+        if (!vehicles[sysId]) {
+            var icon = L.divIcon({ className: '', html: vehicleSvg(color, heading), iconSize: [36, 36], iconAnchor: [18, 18] });
+            vehicles[sysId] = L.marker(latlng, { icon: icon, zIndexOffset: 2000, interactive: false }).addTo(map);
+            vehicles[sysId].bindTooltip('<div class="wp-label">' + label + '-' + sysId + '</div>',
+                { permanent: true, direction: 'top', offset: [0, -22], className: 'vehicle-tooltip' });
+            if (!firstCenter) { map.setView(latlng, 17); firstCenter = true; }
+        } else {
+            vehicles[sysId].setLatLng(latlng);
+            vehicles[sysId].setIcon(L.divIcon({ className: '', html: vehicleSvg(color, heading), iconSize: [36, 36], iconAnchor: [18, 18] }));
+        }
+    }
+
+    // ── Waypoint ──
+    function wpIcon(num) {
+        return L.divIcon({
+            className: 'wp-icon',
+            html: '<svg width="28" height="36" viewBox="0 0 28 36"><path d="M14,0C6.3,0,0,6.3,0,14c0,10.5,14,22,14,22s14-11.5,14-22C28,6.3,21.7,0,14,0z" fill="#00cc44" stroke="#000" stroke-width="1"/><text x="14" y="17" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Consolas">' + num + '</text></svg>',
+            iconSize: [28, 36], iconAnchor: [14, 36]
+        });
+    }
+
+    function redrawWpLine() {
+        if (wpLine) map.removeLayer(wpLine);
+        if (waypoints.length > 1)
+            wpLine = L.polyline(waypoints, { color: '#00ff41', weight: 2, dashArray: '8,5', opacity: 0.9 }).addTo(map);
+    }
+
+    function redrawPolygon() {
+        if (polygonShape) map.removeLayer(polygonShape);
+        if (polygonPoints.length > 2)
+            polygonShape = L.polygon(polygonPoints, { color: '#ffaa00', weight: 2, fillOpacity: 0.15, dashArray: '5,5' }).addTo(map);
+    }
+
+    function addWaypoint(lat, lng) {
+        var idx = waypoints.length + 1;
+        waypoints.push([lat, lng]);
+        var m = L.marker([lat, lng], { icon: wpIcon(idx), draggable: true }).addTo(map);
+        m.bindTooltip('<div class="wp-label">WP' + idx + '  ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</div>',
+            { permanent: false, direction: 'top', offset: [0, -38] });
+        m._wpIdx = idx - 1;
+        m.on('drag', function(e) {
+            waypoints[m._wpIdx] = [e.latlng.lat, e.latlng.lng];
+            redrawWpLine();
+        });
+        wpMarkers.push(m);
+        redrawWpLine();
+    }
+
+    // ── Polygon (draggable vertices) ──
+    function addPolygonPoint(lat, lng) {
+        var idx = polygonPoints.length;
+        polygonPoints.push([lat, lng]);
+        var m = L.marker([lat, lng], {
+            draggable: true,
+            icon: L.divIcon({
+                className: '',
+                html: '<svg width="14" height="14"><rect x="1" y="1" width="12" height="12" fill="#ffaa00" stroke="#fff" stroke-width="1" rx="2"/></svg>',
+                iconSize: [14, 14], iconAnchor: [7, 7]
+            })
+        }).addTo(map);
+        m._polyIdx = idx;
+        m.on('drag', function(e) {
+            polygonPoints[m._polyIdx] = [e.latlng.lat, e.latlng.lng];
+            redrawPolygon();
+        });
+        polygonMarkers.push(m);
+        redrawPolygon();
+    }
+
+    // ── Label (called from QML with text) ──
+    function addLabel(lat, lng, text) {
+        var m = L.marker([lat, lng], {
+            draggable: true,
+            icon: L.divIcon({ className: '', html: '<div class="text-label">' + text + '</div>', iconSize: [0, 0] })
+        }).addTo(map);
+        textLabels.push(m);
+    }
+
+    // ── Pending label click ──
+    var pendingLabelClick = null;
+    map.on('click', function(e) {
+        if (mode === 'waypoint') addWaypoint(e.latlng.lat, e.latlng.lng);
+        else if (mode === 'polygon') addPolygonPoint(e.latlng.lat, e.latlng.lng);
+        else if (mode === 'label') {
+            pendingLabelClick = { lat: e.latlng.lat, lng: e.latlng.lng };
+            // Notify QML to show label dialog
+            console.log('LABEL_REQUEST:' + e.latlng.lat + ',' + e.latlng.lng);
+        }
+    });
+
+    function setMode(m) { mode = m; }
+
+    function clearAll() {
+        wpMarkers.forEach(function(m) { map.removeLayer(m); });
+        if (wpLine) map.removeLayer(wpLine);
+        polygonMarkers.forEach(function(m) { map.removeLayer(m); });
+        if (polygonShape) map.removeLayer(polygonShape);
+        textLabels.forEach(function(m) { map.removeLayer(m); });
+        waypoints = []; wpMarkers = []; wpLine = null;
+        polygonPoints = []; polygonMarkers = []; polygonShape = null;
+        textLabels = [];
+    }
+
+    function getWaypoints() { return JSON.stringify(waypoints); }
+    function getPolygon() { return JSON.stringify(polygonPoints); }
+    function setCenter(lat, lng, zoom) { map.setView([lat, lng], zoom || 17); }
+
+    function undoLast() {
+        if (mode === 'waypoint' && wpMarkers.length > 0) {
+            map.removeLayer(wpMarkers.pop()); waypoints.pop(); redrawWpLine();
+        } else if (mode === 'polygon' && polygonMarkers.length > 0) {
+            map.removeLayer(polygonMarkers.pop()); polygonPoints.pop(); redrawPolygon();
+        } else if (mode === 'label' && textLabels.length > 0) {
+            map.removeLayer(textLabels.pop());
+        }
+    }
+
+    console.log('Plan map ready');
+    </script>
+</body>
+</html>

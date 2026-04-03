@@ -164,6 +164,7 @@ set_source_files_properties(qml/panels/MapPanel.qml            PROPERTIES QT_RES
 set_source_files_properties(qml/panels/ControlPanel.qml        PROPERTIES QT_RESOURCE_ALIAS "ControlPanel.qml")
 set_source_files_properties(qml/panels/JoystickPanel.qml       PROPERTIES QT_RESOURCE_ALIAS "JoystickPanel.qml")
 set_source_files_properties(qml/panels/AttitudeIndicator.qml   PROPERTIES QT_RESOURCE_ALIAS "AttitudeIndicator.qml")
+set_source_files_properties(qml/panels/CameraWindow.qml       PROPERTIES QT_RESOURCE_ALIAS "CameraWindow.qml")
 set_source_files_properties(qml/overlays/HudOverlay.qml        PROPERTIES QT_RESOURCE_ALIAS "HudOverlay.qml")
 set_source_files_properties(qml/overlays/CompassRose.qml       PROPERTIES QT_RESOURCE_ALIAS "CompassRose.qml")
 set_source_files_properties(qml/overlays/DepthGauge.qml        PROPERTIES QT_RESOURCE_ALIAS "DepthGauge.qml")
@@ -185,6 +186,7 @@ qt_add_qml_module(RovoControl
         qml/panels/ControlPanel.qml
         qml/panels/JoystickPanel.qml
         qml/panels/AttitudeIndicator.qml
+        qml/panels/CameraWindow.qml
         qml/overlays/HudOverlay.qml
         qml/overlays/CompassRose.qml
         qml/overlays/DepthGauge.qml

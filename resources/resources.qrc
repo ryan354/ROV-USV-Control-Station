@@ -3,5 +3,6 @@
         <file>map/index.html</file>
         <file>map/map.js</file>
         <file>map/map.css</file>
+        <file>map/plan.html</file>
     </qresource>
 </RCC>

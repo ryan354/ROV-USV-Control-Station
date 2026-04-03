@@ -74,6 +74,15 @@ bool Joystick::button(int index) const
     return false;
 }
 
+int Joystick::pressedButtonsMask() const
+{
+    int mask = 0;
+    for (int i = 0; i < qMin(32, m_buttonCount); ++i) {
+        if (m_buttons.value(i, false)) mask |= (1 << i);
+    }
+    return mask;
+}
+
 // ─── Deadzone / Expo ────────────────────────────────────────────────────────
 
 void Joystick::setDeadzone(double dz)
@@ -156,13 +165,16 @@ void Joystick::update()
 
     if (axisUpdated) emit axesChanged();
 
+    bool buttonUpdated = false;
     for (int i = 0; i < m_buttonCount; ++i) {
         bool pressed = SDL_JoystickGetButton(m_joystick, i) != 0;
         if (m_buttons[i] != pressed) {
             m_buttons[i] = pressed;
             emit buttonChanged(i, pressed);
+            buttonUpdated = true;
         }
     }
+    if (buttonUpdated) emit buttonsChanged();
 #endif
 }
 
@@ -182,6 +194,9 @@ uint16_t Joystick::manualControlButtons() const
 {
     uint16_t buttons = 0;
     for (int i = 0; i < qMin(16, m_buttonCount); ++i) {
+        // Skip buttons with software actions — they're handled by dispatchAction
+        // and would conflict with firmware BTNx_FUNCTION processing
+        if (m_buttonActions.contains(i)) continue;
         if (m_buttons.value(i, false)) buttons |= (1 << i);
     }
     return buttons;

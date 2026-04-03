@@ -47,6 +47,9 @@ class Joystick : public QObject
     // Button actions
     Q_PROPERTY(QVariantMap buttonActions READ buttonActionsVariant WRITE setButtonActionsVariant NOTIFY buttonActionsChanged)
 
+    // Bitmask of currently pressed buttons (for QML binding)
+    Q_PROPERTY(int pressedButtonsMask READ pressedButtonsMask NOTIFY buttonsChanged)
+
 public:
     explicit Joystick(int deviceIndex, QObject *parent = nullptr);
     ~Joystick();
@@ -98,6 +101,9 @@ public:
     Q_INVOKABLE double rawAxis(int index) const;
     Q_INVOKABLE bool button(int index) const;
 
+    // Bitmask of pressed buttons
+    int pressedButtonsMask() const;
+
     // Called by JoystickManager at poll rate
     void update();
 
@@ -111,6 +117,7 @@ public:
 signals:
     void axesChanged();
     void buttonChanged(int button, bool pressed);
+    void buttonsChanged();
     void axisMappingChanged();
     void deadzoneChanged();
     void expoChanged();
@@ -130,10 +137,10 @@ private:
     QVector<bool> m_buttons;
 
     // Axis mapping
-    int m_axisMapX = 0;
-    int m_axisMapY = 1;
-    int m_axisMapZ = 2;
-    int m_axisMapR = 3;
+    int m_axisMapX = 1;
+    int m_axisMapY = 0;
+    int m_axisMapZ = 3;
+    int m_axisMapR = 2;
     bool m_invertX = false;
     bool m_invertY = true;   // Y traditionally inverted
     bool m_invertZ = false;

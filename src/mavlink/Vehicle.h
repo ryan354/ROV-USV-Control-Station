@@ -137,6 +137,7 @@ private:
     void processScaledPressure(const mavlink_message_t &msg);
     void processBatteryStatus(const mavlink_message_t &msg);
     void processRcChannels(const mavlink_message_t &msg);
+    void processCommandAck(const mavlink_message_t &msg);
 
     QString resolveFlightMode(uint8_t baseMode, uint32_t customMode) const;
     void sendCommandLong(uint16_t command, float param1 = 0, float param2 = 0,

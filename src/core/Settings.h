@@ -52,6 +52,9 @@ public:
     void saveJoystickRouting(const QMap<QString, int> &routing);
     QMap<QString, int> loadJoystickRouting() const;
 
+    // Migrations
+    void migrateAxisZR();
+
 signals:
     void rovSysIdChanged();
     void rovPortChanged();

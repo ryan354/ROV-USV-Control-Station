@@ -89,6 +89,9 @@ void JoystickManager::loadConfig()
 {
     if (!m_settings) return;
 
+    // One-time migration: swap Z/R axis defaults (v0.1.0 → v0.2.0)
+    m_settings->migrateAxisZR();
+
     m_joystickVehicleMap = m_settings->loadJoystickRouting();
 
     // Per-joystick settings are applied after enumerate() creates the objects
@@ -142,10 +145,10 @@ void JoystickManager::enumerate()
                 if (!config.isEmpty()) {
                     js->setDeadzone(config.value("deadzone", 0.05).toDouble());
                     js->setExpo(config.value("expo", 0.3).toDouble());
-                    js->setAxisMapX(config.value("axisMapX", 0).toInt());
-                    js->setAxisMapY(config.value("axisMapY", 1).toInt());
-                    js->setAxisMapZ(config.value("axisMapZ", 2).toInt());
-                    js->setAxisMapR(config.value("axisMapR", 3).toInt());
+                    js->setAxisMapX(config.value("axisMapX", 1).toInt());
+                    js->setAxisMapY(config.value("axisMapY", 0).toInt());
+                    js->setAxisMapZ(config.value("axisMapZ", 3).toInt());
+                    js->setAxisMapR(config.value("axisMapR", 2).toInt());
                     js->setInvertX(config.value("invertX", false).toBool());
                     js->setInvertY(config.value("invertY", true).toBool());
                     js->setInvertZ(config.value("invertZ", false).toBool());
@@ -157,18 +160,40 @@ void JoystickManager::enumerate()
 
             // Connect button press to action dispatch
             connect(js, &Joystick::buttonChanged, this, [this, js](int button, bool pressed) {
-                if (!pressed || !m_enabled || !m_vehicleManager) return;
+                if (!pressed) return;
 
                 QString action = js->buttonAction(button);
                 if (action.isEmpty()) return;
 
+                qDebug() << "JoystickManager: Button" << button << "action:" << action;
+
+                if (!m_enabled) {
+                    qDebug() << "JoystickManager: Joystick input disabled";
+                    return;
+                }
+                if (!m_vehicleManager) {
+                    qDebug() << "JoystickManager: No vehicle manager";
+                    return;
+                }
+
                 int sysId = m_joystickVehicleMap.value(js->name(), 0);
-                if (sysId <= 0) return;
+                if (sysId <= 0) {
+                    qDebug() << "JoystickManager: Joystick" << js->name() << "not assigned to any vehicle";
+                    return;
+                }
 
                 Vehicle *v = m_vehicleManager->vehicleBySysId(static_cast<uint8_t>(sysId));
-                if (v && v->isConnected()) {
-                    dispatchAction(v, action);
+                if (!v) {
+                    qDebug() << "JoystickManager: Vehicle sysid" << sysId << "not found";
+                    return;
                 }
+                if (!v->isConnected()) {
+                    qDebug() << "JoystickManager: Vehicle sysid" << sysId << "not connected";
+                    return;
+                }
+
+                qDebug() << "JoystickManager: Dispatching" << action << "to vehicle" << sysId;
+                dispatchAction(v, action);
             });
 
         } else {
@@ -208,7 +233,7 @@ void JoystickManager::poll()
             int sysId = m_joystickVehicleMap.value(js->name(), 0);
             if (sysId > 0) {
                 Vehicle *v = m_vehicleManager->vehicleBySysId(static_cast<uint8_t>(sysId));
-                if (v && v->isConnected()) {
+                if (v && v->isConnected() && v->isArmed()) {
                     v->sendManualControl(
                         js->manualControlX(),
                         js->manualControlY(),

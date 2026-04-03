@@ -125,6 +125,49 @@ QVariantMap Settings::loadJoystickConfig(const QString &name) const
     return config;
 }
 
+void Settings::migrateAxisZR()
+{
+    // Migration v1: swap Z/R
+    if (!m_settings.value("migrations/axisZR_swapped", false).toBool()) {
+        m_settings.beginGroup("joystick");
+        QStringList groups = m_settings.childGroups();
+        for (const QString &g : groups) {
+            if (g == "routing") continue;
+            m_settings.beginGroup(g);
+            if (m_settings.contains("axisMapZ") || m_settings.contains("axisMapR")) {
+                int oldZ = m_settings.value("axisMapZ", 2).toInt();
+                int oldR = m_settings.value("axisMapR", 3).toInt();
+                m_settings.setValue("axisMapZ", oldR);
+                m_settings.setValue("axisMapR", oldZ);
+            }
+            m_settings.endGroup();
+        }
+        m_settings.endGroup();
+        m_settings.setValue("migrations/axisZR_swapped", true);
+        qDebug() << "Settings: Migrated axis Z/R swap";
+    }
+
+    // Migration v2: swap X/Y
+    if (!m_settings.value("migrations/axisXY_swapped", false).toBool()) {
+        m_settings.beginGroup("joystick");
+        QStringList groups = m_settings.childGroups();
+        for (const QString &g : groups) {
+            if (g == "routing") continue;
+            m_settings.beginGroup(g);
+            if (m_settings.contains("axisMapX") || m_settings.contains("axisMapY")) {
+                int oldX = m_settings.value("axisMapX", 0).toInt();
+                int oldY = m_settings.value("axisMapY", 1).toInt();
+                m_settings.setValue("axisMapX", oldY);
+                m_settings.setValue("axisMapY", oldX);
+            }
+            m_settings.endGroup();
+        }
+        m_settings.endGroup();
+        m_settings.setValue("migrations/axisXY_swapped", true);
+        qDebug() << "Settings: Migrated axis X/Y swap";
+    }
+}
+
 void Settings::saveJoystickRouting(const QMap<QString, int> &routing)
 {
     m_settings.beginGroup("joystick/routing");
