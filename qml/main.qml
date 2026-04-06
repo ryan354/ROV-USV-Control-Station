@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtWebEngine
+import QtMultimedia
 
 ApplicationWindow {
     id: root
@@ -216,51 +217,211 @@ ApplicationWindow {
             SplitView.preferredWidth: parent.width * 0.55
             SplitView.minimumWidth: 500
 
-            // ── TOP: Live Map ──
+            // ── TOP: Camera View (single, switchable) ──
             Rectangle {
-                color: "#111c11"
-                SplitView.preferredHeight: parent.height * 0.5
-                SplitView.minimumHeight: 200
+                id: cameraPanel
+                color: "#0a0f0a"
+                SplitView.preferredHeight: parent.height * 0.55
+                SplitView.minimumHeight: 250
+
+                // 0=ROV Cam1, 1=ROV Cam2, 2=USV Cam1, 3=USV Cam2
+                property int activeCam: 0
+                property var camLabels: ["ROV CAM 1", "ROV CAM 2", "USV CAM 1", "USV CAM 2"]
+                property var camColors: ["#00ccff", "#00ccff", "#ffaa00", "#ffaa00"]
+                property var camVehicle: activeCam < 2 ? rov : usv
+                property string camUri: {
+                    switch (activeCam) {
+                    case 0: return settings.rovCamera1
+                    case 1: return settings.rovCamera2
+                    case 2: return settings.usvCamera1
+                    case 3: return settings.usvCamera2
+                    }
+                    return ""
+                }
 
                 ColumnLayout {
                     anchors.fill: parent; spacing: 0
 
+                    // Camera toolbar
                     Rectangle {
                         Layout.fillWidth: true; height: 28; color: "#142014"
                         RowLayout {
-                            anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
-                            Label { text: "MAP"; font.pixelSize: 11; font.bold: true; font.family: "Consolas"; color: "#00ff41" }
+                            anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; spacing: 4
+
+                            Label { text: "CAMERA"; font.pixelSize: 10; font.bold: true; font.family: "Consolas"; color: "#00ff41" }
+                            Rectangle { width: 1; height: 16; color: "#1a3a1a" }
+
+                            // Camera switch buttons
+                            Repeater {
+                                model: 4
+                                Button {
+                                    flat: true; width: 62; height: 22
+                                    contentItem: Label {
+                                        text: cameraPanel.camLabels[index]
+                                        font.pixelSize: 9; font.bold: true; font.family: "Consolas"
+                                        color: cameraPanel.activeCam === index ? cameraPanel.camColors[index] : "#2a5a2a"
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                    background: Rectangle {
+                                        color: cameraPanel.activeCam === index
+                                               ? Qt.rgba(cameraPanel.camColors[index] === "#00ccff" ? 0 : 1,
+                                                         cameraPanel.camColors[index] === "#00ccff" ? 0.8 : 0.67,
+                                                         cameraPanel.camColors[index] === "#00ccff" ? 1 : 0, 0.1)
+                                               : (parent.hovered ? "#1a2a1a" : "transparent")
+                                        radius: 2
+                                        border.width: cameraPanel.activeCam === index ? 1 : 0
+                                        border.color: cameraPanel.camColors[index]
+                                    }
+                                    onClicked: cameraPanel.activeCam = index
+                                }
+                            }
+
                             Item { Layout.fillWidth: true }
-                            Label { text: rov ? "ROV: " + rov.latitude.toFixed(6) + ", " + rov.longitude.toFixed(6) : "ROV: ---"; font.pixelSize: 9; font.family: "Consolas"; color: "#00ccff" }
-                            Rectangle { width: 1; height: 14; color: "#1a3a1a" }
-                            Label { text: usv ? "USV: " + usv.latitude.toFixed(6) + ", " + usv.longitude.toFixed(6) : "USV: ---"; font.pixelSize: 9; font.family: "Consolas"; color: "#ffaa00" }
-                            Rectangle { width: 1; height: 14; color: "#1a3a1a" }
-                            Label { text: vehicleManager.vehicleCount + " vehicle(s)"; font.pixelSize: 9; font.family: "Consolas"; color: "#2a5a2a" }
+
+                            // Active camera URI (truncated)
+                            Label {
+                                text: cameraPanel.camUri ? cameraPanel.camUri.substring(0, 40) : "No URI"
+                                font.pixelSize: 8; font.family: "Consolas"; color: "#2a5a2a"
+                                elide: Text.ElideRight; Layout.maximumWidth: 200
+                            }
                         }
                     }
 
-                    WebEngineView {
-                        id: mapView
+                    // Camera view area
+                    Rectangle {
+                        id: camViewArea
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        backgroundColor: "#0a0f0a"
-                        url: "qrc:/map/index.html"
-                        property bool mapReady: false
-                        onContextMenuRequested: function(request) { request.accepted = true }
-                        onLoadingChanged: function(loadRequest) {
-                            if (loadRequest.status === WebEngineView.LoadSucceededStatus) { mapReady = true; console.log("Map loaded successfully") }
-                        }
-                        function pushVehicleToMap(vehicle) {
-                            if (!mapReady || !vehicle) return
-                            if (vehicle.latitude === 0 && vehicle.longitude === 0) return
-                            runJavaScript("window.updateVehiclePosition(" + vehicle.sysId + "," + vehicle.latitude + "," + vehicle.longitude + "," + vehicle.heading + "," + vehicle.vehicleType + ")")
-                        }
-                    }
+                        color: "#0a0f0a"
+                        clip: true
 
-                    Timer {
-                        interval: 500; running: true; repeat: true
-                        onTriggered: { if (mapView.mapReady) { mapView.pushVehicleToMap(rov); mapView.pushVehicleToMap(usv) } }
+                        property var activeReceiver: videoManager.receiver(cameraPanel.activeCam)
+
+                        // Start/switch stream when camera changes
+                        Connections {
+                            target: cameraPanel
+                            function onActiveCamChanged() { camViewArea.switchStream() }
+                        }
+                        Component.onCompleted: switchStream()
+
+                        function switchStream() {
+                            // Stop all streams first
+                            for (var i = 0; i < 4; i++) {
+                                var r = videoManager.receiver(i)
+                                if (r) r.stop()
+                            }
+                            // Start the active one
+                            var recv = videoManager.receiver(cameraPanel.activeCam)
+                            if (recv && cameraPanel.camUri) {
+                                recv.setUri(cameraPanel.camUri)
+                                recv.setVideoSink(videoOutput.videoSink)
+                                recv.start()
+                                console.log("Starting stream " + cameraPanel.activeCam + ": " + cameraPanel.camUri)
+                            }
+                        }
+
+                        // Video output (GStreamer frames render here)
+                        VideoOutput {
+                            id: videoOutput
+                            anchors.fill: parent
+                            fillMode: VideoOutput.PreserveAspectFit
+                        }
+
+                        // Camera label badge (top-left)
+                        Rectangle {
+                            anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8
+                            z: 10; color: "#cc0a0f0a"; radius: 3
+                            width: camBadge.width + 12; height: camBadge.height + 6
+                            border.width: 1; border.color: cameraPanel.camColors[cameraPanel.activeCam]
+
+                            Label {
+                                id: camBadge; anchors.centerIn: parent
+                                text: cameraPanel.camLabels[cameraPanel.activeCam]
+                                font.pixelSize: 11; font.bold: true; font.family: "Consolas"
+                                color: cameraPanel.camColors[cameraPanel.activeCam]
+                            }
+                        }
+
+                        // Vehicle info overlay (top-right)
+                        Rectangle {
+                            anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8
+                            z: 10; color: "#cc0a0f0a"; radius: 3
+                            width: vehicleInfo.width + 12; height: vehicleInfo.height + 6
+                            visible: cameraPanel.camVehicle !== null
+
+                            Label {
+                                id: vehicleInfo; anchors.centerIn: parent
+                                text: cameraPanel.camVehicle
+                                      ? cameraPanel.camVehicle.name + " | " + cameraPanel.camVehicle.flightMode +
+                                        (cameraPanel.camVehicle.armed ? " | ARMED" : "")
+                                      : ""
+                                font.pixelSize: 10; font.family: "Consolas"
+                                color: cameraPanel.camVehicle && cameraPanel.camVehicle.armed ? "#ff2020" : "#00ff41"
+                            }
+                        }
+
+                        // Stream status overlay (bottom-left)
+                        Rectangle {
+                            anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.margins: 8
+                            z: 10; color: "#cc0a0f0a"; radius: 3
+                            width: statusLbl.width + 12; height: statusLbl.height + 6
+                            visible: camViewArea.activeReceiver !== null
+
+                            Label {
+                                id: statusLbl; anchors.centerIn: parent
+                                text: {
+                                    var r = camViewArea.activeReceiver
+                                    if (!r) return ""
+                                    var s = r.status
+                                    if (r.playing) s += " | " + r.width + "x" + r.height + " | " + r.fps + "fps"
+                                    return s
+                                }
+                                font.pixelSize: 9; font.family: "Consolas"; color: "#44aa44"
+                            }
+                        }
+
+                        // No signal placeholder (shown when not playing)
+                        Column {
+                            anchors.centerIn: parent; spacing: 8
+                            visible: !camViewArea.activeReceiver || !camViewArea.activeReceiver.playing
+
+                            Label {
+                                text: "NO SIGNAL"
+                                font.pixelSize: 28; font.bold: true; font.family: "Consolas"
+                                color: "#1a3a1a"
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            Label {
+                                text: cameraPanel.camLabels[cameraPanel.activeCam]
+                                font.pixelSize: 14; font.family: "Consolas"
+                                color: cameraPanel.camColors[cameraPanel.activeCam]
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            Label {
+                                text: camViewArea.activeReceiver ? camViewArea.activeReceiver.status : "No receiver"
+                                font.pixelSize: 11; font.family: "Consolas"; color: "#2a5a2a"
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            Label {
+                                text: cameraPanel.camUri || "No stream URI configured"
+                                font.pixelSize: 10; font.family: "Consolas"; color: "#2a5a2a"
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            Row {
+                                anchors.horizontalCenter: parent.horizontalCenter; spacing: 6
+                                Repeater {
+                                    model: ["1: ROV1", "2: ROV2", "3: USV1", "4: USV2"]
+                                    Label { text: modelData; font.pixelSize: 9; font.family: "Consolas"; color: "#2a5a2a" }
+                                }
+                            }
+                        }
                     }
                 }
+
+                // Keyboard shortcuts 1-4 to switch camera
+                Shortcut { sequence: "1"; onActivated: cameraPanel.activeCam = 0 }
+                Shortcut { sequence: "2"; onActivated: cameraPanel.activeCam = 1 }
+                Shortcut { sequence: "3"; onActivated: cameraPanel.activeCam = 2 }
+                Shortcut { sequence: "4"; onActivated: cameraPanel.activeCam = 3 }
             }
 
             // ── BOTTOM: Combined HUD (both vehicles) ──

@@ -61,6 +61,10 @@ private:
     bool m_enabled = true;
     int m_sendCounter = 0;
 
+    // Button action cooldown: prevent rapid-fire arm/disarm spam
+    QMap<QString, qint64> m_actionCooldown;  // action → last trigger timestamp
+    static constexpr int ACTION_COOLDOWN_MS = 1000;
+
     // Routing: joystick name → vehicle sysid (0 = unassigned)
     QMap<QString, int> m_joystickVehicleMap;
 

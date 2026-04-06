@@ -1,6 +1,7 @@
 #include "VideoReceiver.h"
 #include <QDebug>
 #include <QDateTime>
+#include <QUrl>
 
 #ifdef HAS_GSTREAMER
 #include <gst/video/video.h>
@@ -85,27 +86,48 @@ void VideoReceiver::createPipeline()
 
     // Build pipeline string based on URI scheme
     QString pipelineStr;
+    QString uri = m_uri.trimmed();
 
-    if (m_uri.startsWith("rtsp://")) {
+    qDebug() << "VideoReceiver: Creating pipeline for URI:" << uri;
+
+    if (uri.startsWith("rtsp://")) {
         pipelineStr = QString(
             "rtspsrc location=%1 latency=200 ! "
             "rtph264depay ! h264parse ! "
             "avdec_h264 ! "
             "videoconvert ! video/x-raw,format=RGBA ! "
             "appsink name=qtsink emit-signals=true max-buffers=2 drop=true"
-        ).arg(m_uri);
-    } else if (m_uri.startsWith("udp://")) {
-        // UDP H.264 stream (e.g., from RPi camera)
-        QString host = m_uri.mid(6);
+        ).arg(uri);
+    } else if (uri.startsWith("udp://") || uri.startsWith("udp:")) {
+        // UDP H.264 stream (e.g., from BlueOS / RPi camera)
+        // Format: udp://HOST:PORT or udp://0.0.0.0:PORT
+        // We extract the port and listen with udpsrc
+
+        // Parse port from URI: find last ':' after the host
+        int port = 5600;
+        QString cleaned = uri;
+        cleaned.remove("udp://").remove("udp:");
+        int colonIdx = cleaned.lastIndexOf(':');
+        if (colonIdx >= 0) {
+            bool ok;
+            int p = cleaned.mid(colonIdx + 1).toInt(&ok);
+            if (ok && p > 0) port = p;
+        }
+
+        qDebug() << "VideoReceiver: UDP H.264/RTP pipeline on port" << port;
+
+        // udpsrc listens on the port for incoming RTP H.264 packets
         pipelineStr = QString(
-            "udpsrc uri=%1 ! "
-            "application/x-rtp,encoding-name=H264 ! "
+            "udpsrc port=%1 "
+            "buffer-size=524288 "
+            "caps=\"application/x-rtp,media=video,encoding-name=H264,payload=96\" ! "
+            "rtpjitterbuffer latency=100 ! "
             "rtph264depay ! h264parse ! "
             "avdec_h264 ! "
             "videoconvert ! video/x-raw,format=RGBA ! "
             "appsink name=qtsink emit-signals=true max-buffers=2 drop=true"
-        ).arg(m_uri);
-    } else if (m_uri.startsWith("test://")) {
+        ).arg(port);
+    } else if (uri.startsWith("test://")) {
         // Test pattern for development
         pipelineStr = QString(
             "videotestsrc pattern=0 ! "
@@ -114,13 +136,13 @@ void VideoReceiver::createPipeline()
             "appsink name=qtsink emit-signals=true max-buffers=2 drop=true"
         );
     } else {
-        // File or other source
-        pipelineStr = QString(
-            "uridecodebin uri=%1 ! "
-            "videoconvert ! video/x-raw,format=RGBA ! "
-            "appsink name=qtsink emit-signals=true max-buffers=2 drop=true"
-        ).arg(m_uri);
+        setStatus("Unsupported URI: " + uri);
+        qWarning() << "VideoReceiver: Unsupported URI scheme:" << uri
+                    << "(supported: rtsp://, udp://, test://)";
+        return;
     }
+
+    qDebug() << "VideoReceiver: Pipeline:" << pipelineStr;
 
     GError *error = nullptr;
     m_pipeline = gst_parse_launch(pipelineStr.toUtf8().constData(), &error);

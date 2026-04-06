@@ -25,14 +25,14 @@ void Settings::setRovPort(int port) {
 }
 
 QString Settings::rovCamera1() const {
-    return m_settings.value("rov/camera1", "rtsp://192.168.2.2:8554/video0").toString();
+    return m_settings.value("rov/camera1", "udp://192.168.2.1:5600").toString();
 }
 void Settings::setRovCamera1(const QString &uri) {
     if (rovCamera1() != uri) { m_settings.setValue("rov/camera1", uri); emit rovCamera1Changed(); }
 }
 
 QString Settings::rovCamera2() const {
-    return m_settings.value("rov/camera2", "rtsp://192.168.2.2:8554/video1").toString();
+    return m_settings.value("rov/camera2", "udp://192.168.2.1:5601").toString();
 }
 void Settings::setRovCamera2(const QString &uri) {
     if (rovCamera2() != uri) { m_settings.setValue("rov/camera2", uri); emit rovCamera2Changed(); }

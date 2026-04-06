@@ -4,6 +4,7 @@
 #include "mavlink/Vehicle.h"
 #include "core/Settings.h"
 #include <QDebug>
+#include <QDateTime>
 
 #ifdef HAS_SDL2
 #include <SDL.h>
@@ -191,6 +192,14 @@ void JoystickManager::enumerate()
                     qDebug() << "JoystickManager: Vehicle sysid" << sysId << "not connected";
                     return;
                 }
+
+                // Cooldown: prevent rapid-fire (e.g. arm/disarm spam from held button)
+                qint64 now = QDateTime::currentMSecsSinceEpoch();
+                QString cooldownKey = js->name() + ":" + action;
+                if (now - m_actionCooldown.value(cooldownKey, 0) < ACTION_COOLDOWN_MS) {
+                    return;  // still in cooldown
+                }
+                m_actionCooldown[cooldownKey] = now;
 
                 qDebug() << "JoystickManager: Dispatching" << action << "to vehicle" << sysId;
                 dispatchAction(v, action);

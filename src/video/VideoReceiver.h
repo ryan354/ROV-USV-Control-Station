@@ -26,7 +26,7 @@ public:
     ~VideoReceiver();
 
     QString uri() const { return m_uri; }
-    void setUri(const QString &uri);
+    Q_INVOKABLE void setUri(const QString &uri);
 
     bool isPlaying() const { return m_playing; }
     int width() const { return m_width; }
@@ -34,7 +34,7 @@ public:
     int fps() const { return m_fps; }
     QString status() const { return m_status; }
 
-    void setVideoSink(QVideoSink *sink);
+    Q_INVOKABLE void setVideoSink(QVideoSink *sink);
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();

@@ -10,6 +10,14 @@ VideoManager::VideoManager(QObject *parent)
     : QObject(parent)
 {
 #ifdef HAS_GSTREAMER
+    // Set plugin path before init if not already set
+    if (qEnvironmentVariableIsEmpty("GST_PLUGIN_SYSTEM_PATH")) {
+        QString gstRoot = qEnvironmentVariable("GSTREAMER_1_0_ROOT_MSVC_X86_64", "C:\\gstreamer\\1.0\\msvc_x86_64");
+        QString pluginPath = gstRoot + "\\lib\\gstreamer-1.0";
+        qputenv("GST_PLUGIN_SYSTEM_PATH", pluginPath.toUtf8());
+        qDebug() << "VideoManager: Set GST_PLUGIN_SYSTEM_PATH to" << pluginPath;
+    }
+
     // Initialize GStreamer once
     if (!gst_is_initialized()) {
         gst_init(nullptr, nullptr);

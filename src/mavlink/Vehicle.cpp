@@ -17,6 +17,13 @@ Vehicle::Vehicle(uint8_t sysId, MavlinkManager *mavlink, QObject *parent)
 
 void Vehicle::handleMessage(const mavlink_message_t &msg)
 {
+    // Any message from vehicle resets the heartbeat timeout
+    m_lastHeartbeat.restart();
+    if (!m_connected) {
+        m_connected = true;
+        emit connectedChanged();
+    }
+
     switch (msg.msgid) {
     case MAVLINK_MSG_ID_HEARTBEAT:
         processHeartbeat(msg);
@@ -55,8 +62,27 @@ void Vehicle::handleMessage(const mavlink_message_t &msg)
 
 void Vehicle::processHeartbeat(const mavlink_message_t &msg)
 {
+    // Only process heartbeats from the autopilot (compid 1), not from
+    // companion computers, camera managers, etc. BlueOS MAVLink Router
+    // forwards heartbeats from multiple components — the companion (compid 191)
+    // may have different base_mode causing armed state to flip-flop.
+    if (msg.compid != 1 && msg.compid != MAV_COMP_ID_AUTOPILOT1) {
+        return;
+    }
+
+    // Deduplicate: skip if same sequence number as last processed heartbeat
+    if (msg.seq == m_lastHeartbeatSeq && m_connected) {
+        return;
+    }
+    m_lastHeartbeatSeq = msg.seq;
+
     mavlink_heartbeat_t hb;
     mavlink_msg_heartbeat_decode(&msg, &hb);
+
+    // Skip non-autopilot heartbeats (GCS type, etc.)
+    if (hb.autopilot == MAV_AUTOPILOT_INVALID && hb.type == MAV_TYPE_GCS) {
+        return;
+    }
 
     m_lastHeartbeat.restart();
 

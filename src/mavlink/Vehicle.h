@@ -150,9 +150,10 @@ private:
     VehicleType m_vehicleType = Unknown;
     bool m_connected = false;
 
-    // Heartbeat timeout
+    // Heartbeat timeout and dedup
     QTimer m_heartbeatTimer;
     QElapsedTimer m_lastHeartbeat;
+    uint8_t m_lastHeartbeatSeq = 255;
 
     // Attitude
     double m_roll = 0;
@@ -187,7 +188,7 @@ private:
     uint32_t m_customMode = 0;
 
     // Constants
-    static constexpr int HEARTBEAT_TIMEOUT_MS = 3000;
+    static constexpr int HEARTBEAT_TIMEOUT_MS = 10000;
     static constexpr uint8_t GCS_SYSID = 255;
     static constexpr uint8_t GCS_COMPID = 190;
 };

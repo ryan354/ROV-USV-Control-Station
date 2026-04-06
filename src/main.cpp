@@ -1,3 +1,5 @@
+#include <QByteArray>
+#include <QString>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
@@ -5,17 +7,39 @@
 #include <QtWebEngineQuick>
 #endif
 #include <QQmlContext>
+#include <QtQml>
 #include <QDebug>
 
 #include "core/Settings.h"
 #include "mavlink/VehicleManager.h"
 #include "mavlink/MavlinkManager.h"
 #include "video/VideoManager.h"
+#include "video/VideoReceiver.h"
 #include "input/JoystickManager.h"
+#include "input/Joystick.h"
 #include "map/MapBridge.h"
 
 int main(int argc, char *argv[])
 {
+    // Add GStreamer bin to PATH so plugins can find their DLL dependencies
+#ifdef HAS_GSTREAMER
+    {
+        QString gstBin = qEnvironmentVariable("GSTREAMER_1_0_ROOT_MSVC_X86_64", "C:\\gstreamer\\1.0\\msvc_x86_64");
+        if (!gstBin.endsWith("\\bin")) gstBin += "\\bin";
+        else gstBin = gstBin.chopped(1); // remove trailing backslash if root path
+
+        // Check both possible locations
+        QString gstRoot = qEnvironmentVariable("GSTREAMER_1_0_ROOT_MSVC_X86_64", "C:\\gstreamer\\1.0\\msvc_x86_64");
+        while (gstRoot.endsWith('\\') || gstRoot.endsWith('/')) gstRoot.chop(1);
+        QString binPath = gstRoot + "\\bin";
+
+        QByteArray currentPath = qgetenv("PATH");
+        if (!currentPath.contains(binPath.toUtf8())) {
+            qputenv("PATH", binPath.toUtf8() + ";" + currentPath);
+        }
+    }
+#endif
+
 #ifdef HAS_WEBENGINE
     QtWebEngineQuick::initialize();
 #endif
@@ -53,6 +77,10 @@ int main(int argc, char *argv[])
     joystickManager.start();
 
     // Set up QML engine
+    // Register C++ types so QML can use them as return types
+    qmlRegisterUncreatableType<VideoReceiver>("RovoControl", 1, 0, "VideoReceiver", "Use videoManager.receiver()");
+    qmlRegisterUncreatableType<Joystick>("RovoControl", 1, 0, "Joystick", "Use joystickManager.joystick()");
+
     QQmlApplicationEngine engine;
 
     // Expose C++ objects to QML
